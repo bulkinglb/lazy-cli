@@ -1,0 +1,15 @@
+# Binary
+lazy-ai-cli
+
+# Environment
+.env
+
+# Go
+*.exe
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
