@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lukas/lazy-ai-cli/config"
-	"github.com/lukas/lazy-ai-cli/executor"
-	"github.com/lukas/lazy-ai-cli/llm"
-	"github.com/lukas/lazy-ai-cli/logger"
-	"github.com/lukas/lazy-ai-cli/safety"
+	"lazy-cli/config"
+	"lazy-cli/executor"
+	"lazy-cli/llm"
+	"lazy-cli/logger"
+	"lazy-cli/safety"
 )
 
 const defaultPrompt = "lazy-cli> "
@@ -216,7 +216,7 @@ func (r *REPL) applySafetyMode() {
 }
 
 func (r *REPL) printWelcome() {
-	r.println("lazy-ai-cli - Natural language to shell commands")
+	r.println("lazy-cli - Natural language to shell commands")
 	r.printf("Type %shelp for available commands, or enter a request.\n", r.cfg.Prefix)
 	r.println("")
 }

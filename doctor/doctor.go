@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lukas/lazy-ai-cli/config"
-	"github.com/lukas/lazy-ai-cli/llm"
+	"lazy-cli/config"
+	"lazy-cli/llm"
 )
 
 // RunDoctor runs all diagnostic checks and reports results
@@ -15,7 +15,7 @@ func RunDoctor(args []string) int {
 		fmt.Fprintf(os.Stderr, "Warning: config error: %v\n", err)
 	}
 
-	fmt.Println("=== lazy-ai-cli doctor ===")
+	fmt.Println("=== lazy-cli doctor ===")
 	fmt.Println()
 
 	allOK := true

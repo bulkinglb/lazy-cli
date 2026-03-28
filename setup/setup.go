@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lukas/lazy-ai-cli/config"
-	"github.com/lukas/lazy-ai-cli/doctor"
-	"github.com/lukas/lazy-ai-cli/llm"
+	"lazy-cli/config"
+	"lazy-cli/doctor"
+	"lazy-cli/llm"
 )
 
 // Run executes the setup flow
@@ -19,7 +19,7 @@ func Run(args []string) int {
 	skipTest := fs.Bool("skip-test", false, "Skip the server test start")
 	fs.Parse(args)
 
-	fmt.Println("=== lazy-ai-cli setup ===")
+	fmt.Println("=== lazy-cli setup ===")
 	fmt.Println()
 
 	// Load or create config

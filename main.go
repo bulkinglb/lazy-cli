@@ -9,12 +9,12 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/lukas/lazy-ai-cli/config"
-	"github.com/lukas/lazy-ai-cli/doctor"
-	"github.com/lukas/lazy-ai-cli/llm"
-	"github.com/lukas/lazy-ai-cli/logger"
-	"github.com/lukas/lazy-ai-cli/repl"
-	"github.com/lukas/lazy-ai-cli/setup"
+	"lazy-cli/config"
+	"lazy-cli/doctor"
+	"lazy-cli/llm"
+	"lazy-cli/logger"
+	"lazy-cli/repl"
+	"lazy-cli/setup"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 			printUsage()
 			return
 		case "version", "--version":
-			fmt.Println("lazy-ai-cli v0.1.0")
+			fmt.Println("lazy-cli v0.1.0")
 			return
 		}
 	}
@@ -141,7 +141,7 @@ func runREPL() {
 }
 
 func printUsage() {
-	fmt.Println("lazy-ai-cli - Natural language to shell commands")
+	fmt.Println("lazy-cli - Natural language to shell commands")
 	fmt.Println()
 	fmt.Println("Usage:")
 	fmt.Println("  lazy-ai              Start interactive CLI (default)")

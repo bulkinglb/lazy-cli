@@ -1,4 +1,4 @@
-# lazy-ai-cli
+# lazy-cli
 
 A lightweight interactive Linux CLI tool that converts natural language into shell commands using a local LLM via [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
@@ -73,7 +73,7 @@ What it does:
 ```
 $ lazy-ai status
 
-=== lazy-ai-cli status ===
+=== lazy-cli status ===
 
   Config file:   /home/user/.lazy-cli/config.json (exists)
   Server path:   /home/user/llama.cpp/build/bin/llama-server (found)
@@ -91,7 +91,7 @@ Checks everything needed to run — config, directories, binary, model, port, an
 ```
 $ lazy-ai doctor
 
-=== lazy-ai-cli doctor ===
+=== lazy-cli doctor ===
 
   [OK] config: /home/user/.lazy-cli/config.json
   [OK] directories: OK
@@ -338,7 +338,7 @@ Can be set in a `.env` file in the working directory (loaded automatically).
 ## Project Structure
 
 ```
-lazy-ai-cli/
+lazy-cli/
 ├── main.go              Entry point, subcommand routing
 ├── config/
 │   └── config.go        Persistent JSON configuration

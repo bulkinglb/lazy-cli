@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lukas/lazy-ai-cli/config"
+	"lazy-cli/config"
 )
 
 // RunStatus displays the current configuration and file status
@@ -14,7 +14,7 @@ func RunStatus(args []string) int {
 		fmt.Fprintf(os.Stderr, "Warning: config error: %v\n", err)
 	}
 
-	fmt.Println("=== lazy-ai-cli status ===")
+	fmt.Println("=== lazy-cli status ===")
 	fmt.Println()
 
 	// Config

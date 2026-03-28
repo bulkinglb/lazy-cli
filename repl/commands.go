@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lukas/lazy-ai-cli/config"
-	"github.com/lukas/lazy-ai-cli/logger"
+	"lazy-cli/config"
+	"lazy-cli/logger"
 )
 
 // Entry is a convenience alias for logger.Entry used in log display

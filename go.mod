@@ -1,3 +1,3 @@
-module github.com/lukas/lazy-ai-cli
+module lazy-cli
 
 go 1.26.1
