@@ -28,9 +28,9 @@ func NewClient(server *Server) *Client {
 
 // CompletionRequest is the request body for /completion
 type CompletionRequest struct {
-	Prompt      string  `json:"prompt"`
-	MaxTokens   int     `json:"n_predict,omitempty"`
-	Temperature float64 `json:"temperature,omitempty"`
+	Prompt      string   `json:"prompt"`
+	MaxTokens   int      `json:"n_predict,omitempty"`
+	Temperature float64  `json:"temperature,omitempty"`
 	Stop        []string `json:"stop,omitempty"`
 }
 
@@ -87,21 +87,38 @@ func (c *Client) GenerateCommand(input string) (string, error) {
 }
 
 func buildPrompt(input string) string {
-	return `You are a Linux shell command generator. Convert the user request into a single shell command.
+	return `You are a Linux shell command generator for an interactive local CLI assistant.
+
+Your task is to convert the user's request into a shell command or a short shell command chain.
+
+SYSTEM CONTEXT:
+- Current working directory: {CWD}
+- Home directory: {HOME}
+- Known path aliases:
+{PATH_ALIASES}
 
 RULES:
-- Output ONLY the command, nothing else
-- No explanations, no markdown, no code blocks
-- Use standard Linux tools (coreutils, apt, systemctl, etc.)
-- Prefer safe commands (avoid rm -rf, sudo when unnecessary)
-- If unsure, output: echo "Unable to generate safe command"
+- Output ONLY the shell command
+- No explanations, no markdown, no code fences
+- Prefer standard Linux tools (find, ls, grep, cat, curl, apt, systemctl, ip, ss, ps, mkdir, cp, mv, tar, etc.)
+- Prefer safe and minimal commands
+- Do NOT invent paths, directories, filenames, services, or package names
+- Resolve relative paths against the current working directory
+- If the user refers to a known alias like "projects", use the matching known path alias
+- If the request is ambiguous or unsafe, output exactly:
+echo "Unable to generate safe command"
+- Avoid destructive commands unless explicitly requested
+- Avoid sudo unless it is clearly required
+- Use a single command if possible, but a short chained command is allowed if necessary
+- Never output comments
 
 EXAMPLES:
+
 User: list all files including hidden
 Command: ls -la
 
 User: find all python files in current directory
-Command: find . -name "*.py"
+Command: find . -type f -name "*.py"
 
 User: show disk usage
 Command: df -h
@@ -109,23 +126,14 @@ Command: df -h
 User: check if docker is running
 Command: systemctl status docker
 
-User: download a file from url
-Command: curl -O https://example.com/file
-
-User: show my ip address
-Command: ip addr show
-
-User: count lines in file.txt
-Command: wc -l file.txt
-
-User: search for "error" in logs
-Command: grep -r "error" /var/log/
-
 User: create a directory called projects
 Command: mkdir -p projects
 
-User: show running processes
-Command: ps aux
+User: find every file ending with .py in projects
+Command: find /home/lukas/projects -type f -name "*.py"
+
+User: delete everything
+Command: echo "Unable to generate safe command"
 
 User: ` + input + `
 Command:`
@@ -134,17 +142,17 @@ Command:`
 func cleanCommand(raw string) string {
 	// Remove common artifacts from LLM output
 	cmd := strings.TrimSpace(raw)
-	
+
 	// Remove markdown code blocks if present
 	cmd = strings.TrimPrefix(cmd, "```bash")
 	cmd = strings.TrimPrefix(cmd, "```sh")
 	cmd = strings.TrimPrefix(cmd, "```")
 	cmd = strings.TrimSuffix(cmd, "```")
-	
+
 	// Take only first line (command should be single line)
 	if idx := strings.Index(cmd, "\n"); idx != -1 {
 		cmd = cmd[:idx]
 	}
-	
+
 	return strings.TrimSpace(cmd)
 }

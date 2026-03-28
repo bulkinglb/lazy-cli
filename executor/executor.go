@@ -12,6 +12,8 @@ import (
 type Result struct {
 	ExitCode int
 	Err      error
+	Stdout   string
+	Stderr   string
 }
 
 // Success returns true if command exited with code 0

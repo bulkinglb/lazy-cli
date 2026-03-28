@@ -2,20 +2,20 @@ package repl
 
 import "strings"
 
-const commandPrefix = "§"
 const directPrefix = "!"
 
 // Parse analyzes user input and returns a Command
-func Parse(input string) Command {
+// cmdPrefix is the configurable internal command prefix (e.g. "%&")
+func Parse(input, cmdPrefix string) Command {
 	input = strings.TrimSpace(input)
 
 	if input == "" {
 		return Command{Type: CommandTypeAI, RawText: input}
 	}
 
-	// Check for special command prefix
-	if strings.HasPrefix(input, commandPrefix) {
-		return parseInternalCommand(input)
+	// Check for internal command prefix
+	if strings.HasPrefix(input, cmdPrefix) {
+		return parseInternalCommand(input, cmdPrefix)
 	}
 
 	// Check for direct command prefix
@@ -33,9 +33,9 @@ func Parse(input string) Command {
 	}
 }
 
-func parseInternalCommand(input string) Command {
+func parseInternalCommand(input, prefix string) Command {
 	// Remove prefix
-	content := strings.TrimPrefix(input, commandPrefix)
+	content := strings.TrimPrefix(input, prefix)
 	content = strings.TrimSpace(content)
 
 	// Split into command name and args

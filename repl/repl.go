@@ -6,8 +6,12 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/lukas/lazy-ai-cli/config"
 	"github.com/lukas/lazy-ai-cli/executor"
+	"github.com/lukas/lazy-ai-cli/llm"
+	"github.com/lukas/lazy-ai-cli/logger"
 	"github.com/lukas/lazy-ai-cli/safety"
 )
 
@@ -23,23 +27,30 @@ type REPL struct {
 	aiHandler AIHandler
 	executor  *executor.Executor
 	safety    *safety.Checker
+	log       *logger.Logger
+	cfg       *config.Config
+	server    *llm.Server
 	reader    *bufio.Reader
 	writer    io.Writer
 	running   bool
 	history   []string
 }
 
-// New creates a REPL with default settings
-func New() *REPL {
+// New creates a REPL with config, logger, and server reference
+func New(cfg *config.Config, log *logger.Logger, server *llm.Server) *REPL {
 	r := &REPL{
 		prompt:   defaultPrompt,
 		registry: NewCommandRegistry(),
 		executor: executor.New(),
 		safety:   safety.NewChecker(),
+		log:      log,
+		cfg:      cfg,
+		server:   server,
 		reader:   bufio.NewReader(os.Stdin),
 		writer:   os.Stdout,
 		history:  make([]string, 0, 100),
 	}
+	r.applySafetyMode()
 	r.registerBuiltinCommands()
 	return r
 }
@@ -89,13 +100,13 @@ func (r *REPL) Stop() {
 }
 
 func (r *REPL) handleInput(input string) {
-	cmd := Parse(input)
+	cmd := Parse(input, r.cfg.Prefix)
 
 	switch cmd.Type {
 	case CommandTypeInternal:
 		r.handleInternalCommand(cmd)
 	case CommandTypeDirect:
-		r.executeWithSafety(cmd.RawText)
+		r.executeWithSafety(cmd.RawText, "")
 	case CommandTypeAI:
 		r.handleAIInput(cmd)
 	}
@@ -104,7 +115,7 @@ func (r *REPL) handleInput(input string) {
 func (r *REPL) handleInternalCommand(cmd Command) {
 	handler, ok := r.registry.Get(cmd.Name)
 	if !ok {
-		r.printf("Unknown command: %s (use %%&help for available commands)\n", cmd.Name)
+		r.printf("Unknown command: %s (use %shelp for available commands)\n", cmd.Name, r.cfg.Prefix)
 		return
 	}
 
@@ -122,38 +133,38 @@ func (r *REPL) handleAIInput(cmd Command) {
 	result, err := r.aiHandler(cmd.RawText)
 	if err != nil {
 		r.printf("AI error: %v\n", err)
+		r.logError("ai_generate", err)
 		return
 	}
 
 	r.printf("Command: %s\n", result)
-	r.executeWithSafety(result)
+	r.executeWithSafety(result, cmd.RawText)
 }
 
-func (r *REPL) executeWithSafety(command string) {
-	// Check safety
+func (r *REPL) executeWithSafety(command, userInput string) {
 	check := r.safety.Check(command)
 
 	switch check.Level {
 	case safety.Blocked:
-		r.printf("⛔ BLOCKED: %s\n", check.Reason)
+		r.printf("BLOCKED: %s\n", check.Reason)
+		r.logBlocked(userInput, command, check.Reason)
 		return
 
 	case safety.Dangerous:
-		r.printf("⚠️  DANGEROUS: %s\n", check.Reason)
+		r.printf("DANGEROUS: %s\n", check.Reason)
 		if !r.confirm("Execute anyway? [y/N]: ") {
 			r.println("Cancelled.")
 			return
 		}
 
 	case safety.Caution:
-		r.printf("⚡ Caution: %s\n", check.Reason)
+		r.printf("Caution: %s\n", check.Reason)
 		if !r.confirm("Execute? [Y/n]: ") {
 			r.println("Cancelled.")
 			return
 		}
 
 	case safety.Safe:
-		// Auto-execute in yolo mode, otherwise quick confirm
 		if r.safety.Mode != safety.ModeYolo {
 			if !r.confirm("Execute? [Y/n]: ") {
 				r.println("Cancelled.")
@@ -162,11 +173,20 @@ func (r *REPL) executeWithSafety(command string) {
 		}
 	}
 
-	// Execute
 	r.println("---")
+	start := time.Now()
 	result := r.executor.Run(command)
+	duration := time.Since(start)
 	r.println("---")
 	r.println(executor.FormatResult(result))
+
+	if r.log != nil && r.cfg.LogEnabled {
+		if userInput != "" {
+			r.log.LogInteraction(userInput, command, check.Level.String(), check.Reason, result.ExitCode, result.Stdout, result.Stderr, duration)
+		} else {
+			r.log.LogDirect(command, check.Level.String(), check.Reason, result.ExitCode, result.Stdout, result.Stderr, duration)
+		}
+	}
 }
 
 func (r *REPL) confirm(prompt string) bool {
@@ -177,66 +197,27 @@ func (r *REPL) confirm(prompt string) bool {
 	}
 	line = strings.ToLower(strings.TrimSpace(line))
 
-	// Default yes for [Y/n], default no for [y/N]
 	if strings.Contains(prompt, "[Y/n]") {
 		return line == "" || line == "y" || line == "yes"
 	}
 	return line == "y" || line == "yes"
 }
 
-func (r *REPL) registerBuiltinCommands() {
-	r.registry.Register("help", "Show available commands", r.cmdHelp)
-	r.registry.Register("exit", "Exit the CLI", r.cmdExit)
-	r.registry.Register("quit", "Exit the CLI", r.cmdExit)
-	r.registry.Register("history", "Show command history", r.cmdHistory)
-	r.registry.Register("config", "Show current configuration", r.cmdConfig)
-	r.registry.Register("status", "Show LLM server status", r.cmdStatus)
-}
-
-func (r *REPL) cmdHelp(_ string) error {
-	r.println("Available commands:")
-	for name, desc := range r.registry.List() {
-		r.printf("  §%-10s %s\n", name, desc)
+// applySafetyMode syncs the safety checker mode with the config mode string
+func (r *REPL) applySafetyMode() {
+	switch r.cfg.Mode {
+	case "ultra-safe":
+		r.safety.Mode = safety.ModeUltraSafe
+	case "yolo":
+		r.safety.Mode = safety.ModeYolo
+	default:
+		r.safety.Mode = safety.ModeNormal
 	}
-	r.println("\nPrefixes:")
-	r.println("  !command    Execute shell command directly")
-	r.println("  (no prefix) Send to AI for command generation")
-	return nil
-}
-
-func (r *REPL) cmdExit(_ string) error {
-	r.println("Goodbye!")
-	r.Stop()
-	return nil
-}
-
-func (r *REPL) cmdHistory(_ string) error {
-	if len(r.history) == 0 {
-		r.println("No history yet.")
-		return nil
-	}
-	r.println("Command history:")
-	for i, h := range r.history {
-		r.printf("  %3d: %s\n", i+1, h)
-	}
-	return nil
-}
-
-func (r *REPL) cmdConfig(_ string) error {
-	r.println("Configuration: (not yet implemented)")
-	// TODO: Integrate with config package
-	return nil
-}
-
-func (r *REPL) cmdStatus(_ string) error {
-	r.println("LLM Status: (not yet implemented)")
-	// TODO: Integrate with LLM server manager
-	return nil
 }
 
 func (r *REPL) printWelcome() {
 	r.println("lazy-ai-cli - Natural language to shell commands")
-	r.println("Type %&help for available commands, or enter a request.")
+	r.printf("Type %shelp for available commands, or enter a request.\n", r.cfg.Prefix)
 	r.println("")
 }
 
@@ -250,4 +231,16 @@ func (r *REPL) println(s string) {
 
 func (r *REPL) printf(format string, args ...any) {
 	fmt.Fprintf(r.writer, format, args...)
+}
+
+func (r *REPL) logError(context string, err error) {
+	if r.log != nil {
+		r.log.LogError(context, err)
+	}
+}
+
+func (r *REPL) logBlocked(input, command, reason string) {
+	if r.log != nil {
+		r.log.LogBlocked(input, command, reason)
+	}
 }

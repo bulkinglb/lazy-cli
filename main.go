@@ -9,7 +9,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/lukas/lazy-ai-cli/config"
 	"github.com/lukas/lazy-ai-cli/llm"
+	"github.com/lukas/lazy-ai-cli/logger"
 	"github.com/lukas/lazy-ai-cli/repl"
 )
 
@@ -17,11 +19,20 @@ func main() {
 	// Load .env file first
 	loadEnv(".env")
 
-	// CLI flags (with env fallbacks)
+	// Load persistent config
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: config error: %v\n", err)
+	}
+
+	// CLI flags (with env fallbacks, config as secondary fallback)
 	modelPath := flag.String("model", os.Getenv("LLAMA_MODEL_PATH"), "Path to GGUF model file")
 	serverBinary := flag.String("server", envOrDefault("LLAMA_SERVER_PATH", "llama-server"), "Path to llama-server binary")
-	port := flag.Int("port", 8080, "Port for llama-server")
+	port := flag.Int("port", cfg.Port, "Port for llama-server")
 	flag.Parse()
+
+	// Sync port back to config
+	cfg.Port = *port
 
 	if *modelPath == "" {
 		fmt.Fprintln(os.Stderr, "Error: --model is required (or set LLAMA_MODEL_PATH in .env)")
@@ -45,11 +56,23 @@ func main() {
 		fmt.Println("Using existing LLM server")
 	}
 
+	// Create logger
+	var log *logger.Logger
+	if cfg.LogEnabled {
+		log, err = logger.New()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: logging disabled: %v\n", err)
+		}
+	}
+	if log != nil {
+		defer log.Close()
+	}
+
 	// Create LLM client
 	client := llm.NewClient(server)
 
 	// Create REPL
-	r := repl.New()
+	r := repl.New(cfg, log, server)
 	r.SetAIHandler(func(input string) (string, error) {
 		return client.GenerateCommand(input)
 	})
