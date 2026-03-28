@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	defaultPrefix = "%&"
+	defaultPrefix = "§"
 	defaultPort   = 8085
 	defaultMode   = "normal"
 )
