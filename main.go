@@ -10,12 +10,37 @@ import (
 	"syscall"
 
 	"github.com/lukas/lazy-ai-cli/config"
+	"github.com/lukas/lazy-ai-cli/doctor"
 	"github.com/lukas/lazy-ai-cli/llm"
 	"github.com/lukas/lazy-ai-cli/logger"
 	"github.com/lukas/lazy-ai-cli/repl"
+	"github.com/lukas/lazy-ai-cli/setup"
 )
 
 func main() {
+	// Check for subcommands before flag parsing
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "setup":
+			os.Exit(setup.Run(os.Args[2:]))
+		case "status":
+			os.Exit(doctor.RunStatus(os.Args[2:]))
+		case "doctor":
+			os.Exit(doctor.RunDoctor(os.Args[2:]))
+		case "help", "--help", "-h":
+			printUsage()
+			return
+		case "version", "--version":
+			fmt.Println("lazy-ai-cli v0.1.0")
+			return
+		}
+	}
+
+	// Default: run the interactive REPL
+	runREPL()
+}
+
+func runREPL() {
 	// Load .env file first
 	loadEnv(".env")
 
@@ -54,7 +79,10 @@ func main() {
 	cfg.Port = *port
 
 	if *modelPath == "" {
-		fmt.Fprintln(os.Stderr, "Error: --model is required (or set LLAMA_MODEL_PATH in .env, or §config model <path>)")
+		fmt.Fprintln(os.Stderr, "Error: --model is required (or set LLAMA_MODEL_PATH in .env, or run 'lazy-ai setup')")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "Quick start:")
+		fmt.Fprintln(os.Stderr, "  lazy-ai setup --llama-server /path/to/llama-server --model /path/to/model.gguf")
 		os.Exit(1)
 	}
 
@@ -65,6 +93,7 @@ func main() {
 	fmt.Println("Starting LLM server...")
 	if err := server.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintln(os.Stderr, "Run 'lazy-ai doctor' to diagnose the issue.")
 		os.Exit(1)
 	}
 	defer server.Stop()
@@ -109,6 +138,26 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func printUsage() {
+	fmt.Println("lazy-ai-cli - Natural language to shell commands")
+	fmt.Println()
+	fmt.Println("Usage:")
+	fmt.Println("  lazy-ai              Start interactive CLI (default)")
+	fmt.Println("  lazy-ai setup        Configure llama-server and model paths")
+	fmt.Println("  lazy-ai status       Show current configuration and file status")
+	fmt.Println("  lazy-ai doctor       Run diagnostic checks")
+	fmt.Println("  lazy-ai help         Show this help message")
+	fmt.Println("  lazy-ai version      Show version")
+	fmt.Println()
+	fmt.Println("Flags (for interactive mode):")
+	fmt.Println("  --model PATH         Path to GGUF model file")
+	fmt.Println("  --server PATH        Path to llama-server binary")
+	fmt.Println("  --port PORT          Port for llama-server")
+	fmt.Println()
+	fmt.Println("Setup:")
+	fmt.Println("  lazy-ai setup --llama-server /path/to/llama-server --model /path/to/model.gguf")
 }
 
 // loadEnv reads a .env file and sets environment variables

@@ -9,7 +9,7 @@ import (
 
 const (
 	defaultPrefix = "%&"
-	defaultPort   = 8080
+	defaultPort   = 8085
 	defaultMode   = "normal"
 )
 
@@ -113,4 +113,24 @@ func IsValidMode(mode string) bool {
 		}
 	}
 	return false
+}
+
+// Dir returns the base config directory (~/.lazy-cli)
+func Dir() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".lazy-cli")
+}
+
+// EnsureDirs creates all required directories
+func EnsureDirs() error {
+	dirs := []string{
+		Dir(),
+		filepath.Join(Dir(), "logs"),
+	}
+	for _, d := range dirs {
+		if err := os.MkdirAll(d, 0755); err != nil {
+			return fmt.Errorf("create %s: %w", d, err)
+		}
+	}
+	return nil
 }
