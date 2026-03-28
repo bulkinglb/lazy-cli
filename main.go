@@ -26,16 +26,35 @@ func main() {
 	}
 
 	// CLI flags (with env fallbacks, config as secondary fallback)
-	modelPath := flag.String("model", os.Getenv("LLAMA_MODEL_PATH"), "Path to GGUF model file")
-	serverBinary := flag.String("server", envOrDefault("LLAMA_SERVER_PATH", "llama-server"), "Path to llama-server binary")
+	modelPath := flag.String("model", "", "Path to GGUF model file")
+	serverBinary := flag.String("server", "", "Path to llama-server binary")
 	port := flag.Int("port", cfg.Port, "Port for llama-server")
 	flag.Parse()
+
+	// Resolve model path: flag > env > config
+	if *modelPath == "" {
+		*modelPath = os.Getenv("LLAMA_MODEL_PATH")
+	}
+	if *modelPath == "" {
+		*modelPath = cfg.ModelPath
+	}
+
+	// Resolve server binary: flag > env > config > default
+	if *serverBinary == "" {
+		*serverBinary = os.Getenv("LLAMA_SERVER_PATH")
+	}
+	if *serverBinary == "" && cfg.ServerPath != "" {
+		*serverBinary = cfg.ServerPath
+	}
+	if *serverBinary == "" {
+		*serverBinary = "llama-server"
+	}
 
 	// Sync port back to config
 	cfg.Port = *port
 
 	if *modelPath == "" {
-		fmt.Fprintln(os.Stderr, "Error: --model is required (or set LLAMA_MODEL_PATH in .env)")
+		fmt.Fprintln(os.Stderr, "Error: --model is required (or set LLAMA_MODEL_PATH in .env, or §config model <path>)")
 		os.Exit(1)
 	}
 
@@ -113,11 +132,4 @@ func loadEnv(path string) {
 			os.Setenv(key, value)
 		}
 	}
-}
-
-func envOrDefault(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
 }

@@ -81,6 +81,9 @@ func (r *REPL) cmdStatus(_ string) error {
 		r.printf("  Log file:        (none)\n")
 	}
 
+	r.printf("  Model path:      %s\n", valueOrDefault(r.cfg.ModelPath, "(from .env/flag)"))
+	r.printf("  Server path:     %s\n", valueOrDefault(r.cfg.ServerPath, "(from .env/flag)"))
+
 	if r.server != nil {
 		running := r.server.IsRunning()
 		r.printf("  LLM server:      %s\n", boolStatus(running))
@@ -173,12 +176,36 @@ func (r *REPL) cmdConfig(args string) error {
 		r.cfg.LogPath = value
 		r.printf("Log path set to: %s (takes effect on next session)\n", value)
 
+	case "model":
+		if value == "" {
+			if r.cfg.ModelPath == "" {
+				r.println("Model path: (not set, using .env or --model flag)")
+			} else {
+				r.printf("Model path: %s\n", r.cfg.ModelPath)
+			}
+			return nil
+		}
+		r.cfg.ModelPath = value
+		r.printf("Model path set to: %s (takes effect on next restart)\n", value)
+
+	case "server":
+		if value == "" {
+			if r.cfg.ServerPath == "" {
+				r.println("Server path: (not set, using .env or --server flag)")
+			} else {
+				r.printf("Server path: %s\n", r.cfg.ServerPath)
+			}
+			return nil
+		}
+		r.cfg.ServerPath = value
+		r.printf("Server path set to: %s (takes effect on next restart)\n", value)
+
 	case "alias":
 		return r.handleAlias(value)
 
 	default:
 		r.printf("Unknown config key: %s\n", key)
-		r.println("Available keys: mode, port, prefix, logging, logpath, alias")
+		r.println("Available keys: mode, port, prefix, logging, logpath, model, server, alias")
 		return nil
 	}
 
@@ -192,6 +219,8 @@ func (r *REPL) showConfig() error {
 	r.printf("  prefix:     %s\n", r.cfg.Prefix)
 	r.printf("  logging:    %s\n", boolYesNo(r.cfg.LogEnabled))
 	r.printf("  logpath:    %s\n", r.cfg.LogPath)
+	r.printf("  model:      %s\n", valueOrDefault(r.cfg.ModelPath, "(not set)"))
+	r.printf("  server:     %s\n", valueOrDefault(r.cfg.ServerPath, "(not set)"))
 
 	if len(r.cfg.PathAliases) > 0 {
 		r.println("  aliases:")
@@ -412,4 +441,11 @@ func boolStatus(b bool) string {
 		return "running"
 	}
 	return "stopped"
+}
+
+func valueOrDefault(s, fallback string) string {
+	if s == "" {
+		return fallback
+	}
+	return s
 }

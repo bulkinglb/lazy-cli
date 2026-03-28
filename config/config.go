@@ -20,6 +20,8 @@ type Config struct {
 	Prefix      string            `json:"prefix"`       // command prefix (default %&)
 	LogEnabled  bool              `json:"log_enabled"`  // whether logging is active
 	LogPath     string            `json:"log_path"`     // log directory path
+	ModelPath   string            `json:"model_path"`   // path to GGUF model file
+	ServerPath  string            `json:"server_path"`  // path to llama-server binary
 	PathAliases map[string]string `json:"path_aliases"` // known path shortcuts
 
 	filePath string // where this config is stored (not serialized)
