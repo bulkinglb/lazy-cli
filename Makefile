@@ -1,7 +1,7 @@
 .PHONY: help build all install clean test lint run release vet fmt
 
 # Variables
-VERSION=0.1.0
+VERSION=0.1.1
 BINARY_NAME=lazy-cli
 LINUX_AMD64=$(BINARY_NAME)-linux-amd64
 LINUX_ARM64=$(BINARY_NAME)-linux-arm64
