@@ -77,13 +77,15 @@ run: build
 # Build, tag, and release to GitHub
 release: all
 	@echo "Creating release v$(VERSION)..."
-	git tag v$(VERSION)
-	git push origin v$(VERSION)
-	gh release create v$(VERSION) \
+	-git tag v$(VERSION)
+	-git push origin v$(VERSION)
+	-gh release create v$(VERSION) \
+		--title "lazy-cli v$(VERSION)" \
+		--notes "Releases for Linux (AMD64/ARM64) and macOS (Intel/Apple Silicon)"
+	gh release upload v$(VERSION) \
 		$(LINUX_AMD64) \
 		$(LINUX_ARM64) \
 		$(MACOS_AMD64) \
 		$(MACOS_ARM64) \
-		--title "lazy-cli v$(VERSION)" \
-		--notes "Releases for Linux (AMD64/ARM64) and macOS (Intel/Apple Silicon)"
+		--clobber
 	@echo "✓ Released v$(VERSION)"

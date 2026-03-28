@@ -1,24 +1,81 @@
 # lazy-cli
 
-A lightweight interactive Linux CLI tool that converts natural language into shell commands using a local LLM via [llama.cpp](https://github.com/ggml-org/llama.cpp).
+A lightweight interactive CLI tool that converts natural language into shell commands using a local LLM via [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
 Designed to run on low-resource hardware (Raspberry Pi, old laptops) with small GGUF models. No cloud, no API keys, no GUI — just a terminal.
+
+Supports **Linux** and **macOS** on both **AMD64** and **ARM64**.
+
+---
+
+## Installation
+
+### Quick Install (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bulkinglb/lazy-cli/main/install.sh | sh
+```
+
+Or with `wget`:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/bulkinglb/lazy-cli/main/install.sh | sh
+```
+
+This automatically detects your OS and architecture, downloads the correct binary, and installs it to `/usr/local/bin`.
+
+### Manual Download
+
+Download the binary for your platform from the [Releases](https://github.com/bulkinglb/lazy-cli/releases) page:
+
+| Platform | Binary |
+|---|---|
+| Linux (AMD64) | `lazy-cli-linux-amd64` |
+| Linux (ARM64 / Raspberry Pi) | `lazy-cli-linux-arm64` |
+| macOS (Intel) | `lazy-cli-macos-amd64` |
+| macOS (Apple Silicon) | `lazy-cli-macos-arm64` |
+
+```bash
+# Example: Linux AMD64
+curl -fsSL https://github.com/bulkinglb/lazy-cli/releases/latest/download/lazy-cli-linux-amd64 -o lazy-cli
+chmod +x lazy-cli
+sudo mv lazy-cli /usr/local/bin/
+```
+
+### Build from Source
+
+Requires Go 1.21+.
+
+```bash
+git clone https://github.com/bulkinglb/lazy-cli.git
+cd lazy-cli
+make build        # builds for current platform → ./lazy-cli
+make install      # installs to ~/go/bin/lazy-cli
+```
+
+To cross-compile for all platforms:
+
+```bash
+make all
+# Produces:
+#   lazy-cli-linux-amd64
+#   lazy-cli-linux-arm64
+#   lazy-cli-macos-amd64
+#   lazy-cli-macos-arm64
+```
 
 ---
 
 ## Quick Start
 
 ```bash
-# Build
-go build -o lazy-ai .
-
-# First-time setup (one command)
-./lazy-ai setup \
+# 1. Setup (one time) — provide your llama-server and a GGUF model
+lazy-cli setup \
   --llama-server /path/to/llama-server \
   --model /path/to/model.gguf
 
-# Run
-./lazy-ai
+# 2. Run
+lazy-cli
 ```
 
 After setup, paths are saved to `~/.lazy-cli/config.json`. Future runs need no flags.
@@ -27,7 +84,6 @@ After setup, paths are saved to `~/.lazy-cli/config.json`. Future runs need no f
 
 ## Requirements
 
-- Go 1.21+
 - A [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` binary
 - A GGUF model file (e.g. `gemma-3-1b-it-Q4_K_M.gguf`, `phi-2-Q4_K_M.gguf`)
 - Linux or macOS
@@ -364,6 +420,8 @@ lazy-cli/
 ├── setup/
 │   └── setup.go         'setup' subcommand
 ├── go.mod
+├── Makefile             Build and release automation
+├── install.sh           One-line installer script
 ├── .env                 Local environment (gitignored)
 └── .gitignore
 ```
