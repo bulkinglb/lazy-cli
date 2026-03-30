@@ -31,7 +31,7 @@ func main() {
 			printUsage()
 			return
 		case "version", "--version":
-			fmt.Println("lazy-cli v0.1.0")
+			fmt.Println("lazy-cli v0.1.1")
 			return
 		}
 	}

@@ -1,7 +1,11 @@
 # Binaries
 lazy-cli
+lazy-ai-cli
 lazy-cli-linux-*
 lazy-cli-macos-*
+
+# Release archives
+dist/
 
 # Environment
 .env
@@ -10,6 +14,10 @@ lazy-cli-macos-*
 *.exe
 *.test
 *.out
+coverage.html
+
+# macOS
+.DS_Store
 
 # IDE
 .idea/

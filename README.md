@@ -8,6 +8,35 @@ Supports **Linux** and **macOS** on both **AMD64** and **ARM64**.
 
 ---
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [Quick Install](#quick-install-recommended)
+  - [Manual Download](#manual-download)
+  - [Build from Source](#build-from-source)
+- [Quick Start](#quick-start)
+- [CLI Commands](#cli-commands)
+- [Interactive Mode](#interactive-mode)
+  - [Example Session](#example-session)
+- [Internal Commands](#internal-commands)
+  - [`§config` — Configuration Management](#config--configuration-management)
+  - [`§logs` — Log Viewer](#logs--log-viewer)
+- [Safety System](#safety-system)
+  - [Safety Levels](#safety-levels)
+  - [Safety Modes](#safety-modes)
+  - [Blocked Patterns](#blocked-patterns-always-refused)
+  - [Dangerous Patterns](#dangerous-patterns)
+  - [Caution Patterns](#caution-patterns)
+- [Logging](#logging)
+- [Configuration File](#configuration-file)
+- [Environment Variables](#environment-variables)
+- [Project Structure](#project-structure)
+- [LLM Server Management](#llm-server-management)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+---
+
 ## Installation
 
 ### Quick Install (recommended)
@@ -22,23 +51,22 @@ Or with `wget`:
 wget -qO- https://raw.githubusercontent.com/bulkinglb/lazy-cli/main/install.sh | sh
 ```
 
-This automatically detects your OS and architecture, downloads the correct binary, and installs it to `/usr/local/bin`.
+This automatically detects your OS and architecture, downloads and extracts the correct binary, and installs it to `/usr/local/bin` (falls back to `~/.local/bin` if sudo is unavailable).
 
 ### Manual Download
 
-Download the binary for your platform from the [Releases](https://github.com/bulkinglb/lazy-cli/releases) page:
+Download the archive for your platform from the [Releases](https://github.com/bulkinglb/lazy-cli/releases) page:
 
-| Platform | Binary |
+| Platform | Archive |
 |---|---|
-| Linux (AMD64) | `lazy-cli-linux-amd64` |
-| Linux (ARM64 / Raspberry Pi) | `lazy-cli-linux-arm64` |
-| macOS (Intel) | `lazy-cli-macos-amd64` |
-| macOS (Apple Silicon) | `lazy-cli-macos-arm64` |
+| Linux (AMD64) | `lazy-cli-linux-amd64.tar.gz` |
+| Linux (ARM64 / Raspberry Pi) | `lazy-cli-linux-arm64.tar.gz` |
+| macOS (Intel) | `lazy-cli-macos-amd64.tar.gz` |
+| macOS (Apple Silicon) | `lazy-cli-macos-arm64.tar.gz` |
 
 ```bash
 # Example: Linux AMD64
-curl -fsSL https://github.com/bulkinglb/lazy-cli/releases/latest/download/lazy-cli-linux-amd64 -o lazy-cli
-chmod +x lazy-cli
+curl -fsSL https://github.com/bulkinglb/lazy-cli/releases/latest/download/lazy-cli-linux-amd64.tar.gz | tar -xz
 sudo mv lazy-cli /usr/local/bin/
 ```
 
@@ -69,24 +97,20 @@ make all
 ## Quick Start
 
 ```bash
-# 1. Setup (one time) — provide your llama-server and a GGUF model
-lazy-cli setup \
-  --llama-server /path/to/llama-server \
-  --model /path/to/model.gguf
+# 1. Setup (one time) — auto-downloads llama-server and Gemma 3 1B if not already installed
+lazy-cli setup
 
 # 2. Run
 lazy-cli
 ```
 
+Or provide your own llama-server and model:
+
+```bash
+lazy-cli setup --llama-server /path/to/llama-server --model /path/to/model.gguf
+```
+
 After setup, paths are saved to `~/.lazy-cli/config.json`. Future runs need no flags.
-
----
-
-## Requirements
-
-- A [llama.cpp](https://github.com/ggml-org/llama.cpp) `llama-server` binary
-- A GGUF model file (e.g. `gemma-3-1b-it-Q4_K_M.gguf`, `phi-2-Q4_K_M.gguf`)
-- Linux or macOS
 
 ---
 
@@ -110,19 +134,21 @@ lazy-ai [--model PATH] [--server PATH] [--port PORT]
 
 ### `lazy-ai setup` — First-Time Configuration
 
-Validates paths, saves them to config, and test-starts the server.
+Validates paths, saves them to config, and test-starts the server. If `--llama-server` or `--model` are not provided, **automatically downloads** the latest llama.cpp release and Gemma 3 1B.
 
 ```
-lazy-ai setup --llama-server PATH --model PATH [--port PORT] [--skip-test]
+lazy-ai setup [--llama-server PATH] [--model PATH] [--port PORT] [--skip-test]
 ```
 
 What it does:
 1. Creates `~/.lazy-cli/` and `~/.lazy-cli/logs/` if missing
-2. Validates the llama-server binary exists and is executable
-3. Validates the model file exists and has valid GGUF magic bytes
-4. Checks the port is available
-5. Saves everything to `~/.lazy-cli/config.json`
-6. Test-starts the server and runs a health check (unless `--skip-test`)
+2. If no llama-server is configured, checks PATH — then auto-downloads from llama.cpp releases to `~/.lazy-cli/bin/`
+3. If no model is configured, auto-downloads `gemma-3-1b-it-Q4_K_M.gguf` (~800 MB) to `~/.lazy-cli/models/`
+4. Validates the llama-server binary exists and is executable
+5. Validates the model file exists and has valid GGUF magic bytes
+6. Checks the port is available
+7. Saves everything to `~/.lazy-cli/config.json`
+8. Test-starts the server and runs a health check (unless `--skip-test`)
 
 ### `lazy-ai status` — Show Current State
 
@@ -207,7 +233,7 @@ lazy-cli> §status
 
 ## Internal Commands
 
-All internal commands start with the configured prefix (default `%&`).
+All internal commands start with the configured prefix (default `§`).
 
 | Command | Description |
 |---|---|
@@ -363,11 +389,11 @@ Stored at `~/.lazy-cli/config.json`.
 {
   "mode": "normal",
   "port": 8085,
-  "prefix": "%&",
+  "prefix": "§",
   "log_enabled": true,
   "log_path": "/home/user/.lazy-cli/logs",
-  "model_path": "/path/to/model.gguf",
-  "server_path": "/path/to/llama-server",
+  "model_path": "/home/user/.lazy-cli/models/gemma-3-1b-it-Q4_K_M.gguf",
+  "server_path": "/home/user/.lazy-cli/bin/llama-server",
   "path_aliases": {
     "projects": "/home/user/Projects"
   }
@@ -418,7 +444,8 @@ lazy-cli/
 ├── safety/
 │   └── safety.go        Regex-based command safety classification
 ├── setup/
-│   └── setup.go         'setup' subcommand
+│   ├── setup.go         'setup' subcommand
+│   └── download.go      Auto-download logic for llama.cpp and Gemma model
 ├── go.mod
 ├── Makefile             Build and release automation
 ├── install.sh           One-line installer script
@@ -455,8 +482,10 @@ lazy-ai doctor
 This will pinpoint the exact issue — missing binary, bad model, port conflict.
 
 ### "model is required" error
-Run setup to save paths permanently:
+Run setup — it will auto-download everything:
 ```bash
+lazy-ai setup
+# or manually:
 lazy-ai setup --llama-server /path/to/llama-server --model /path/to/model.gguf
 ```
 

@@ -83,15 +83,20 @@ main() {
     ok "Latest version: ${VERSION}"
 
     # Build download URL
-    ASSET_NAME="${BINARY_NAME}-${OS}-${ARCH}"
+    ASSET_NAME="${BINARY_NAME}-${OS}-${ARCH}.tar.gz"
     DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET_NAME}"
 
-    # Download to temp file
+    # Download to temp dir
     TMP_DIR=$(mktemp -d)
-    TMP_FILE="${TMP_DIR}/${BINARY_NAME}"
+    TMP_ARCHIVE="${TMP_DIR}/${ASSET_NAME}"
     info "Downloading ${ASSET_NAME}..."
-    download "$DOWNLOAD_URL" "$TMP_FILE" || fail "Download failed. Check if the release exists: https://github.com/${REPO}/releases/tag/${VERSION}"
+    download "$DOWNLOAD_URL" "$TMP_ARCHIVE" || fail "Download failed. Check if the release exists: https://github.com/${REPO}/releases/tag/${VERSION}"
     ok "Downloaded"
+
+    # Extract binary from archive
+    tar -xzf "$TMP_ARCHIVE" -C "$TMP_DIR"
+    TMP_FILE="${TMP_DIR}/${BINARY_NAME}"
+    [ -f "$TMP_FILE" ] || fail "Binary not found in archive"
 
     # Make executable
     chmod +x "$TMP_FILE"
