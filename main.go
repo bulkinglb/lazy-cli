@@ -31,7 +31,7 @@ func main() {
 			printUsage()
 			return
 		case "version", "--version":
-			fmt.Println("lazy-cli v0.1.1")
+			fmt.Println("lazy-cli v0.1.2")
 			return
 		}
 	}
@@ -79,10 +79,10 @@ func runREPL() {
 	cfg.Port = *port
 
 	if *modelPath == "" {
-		fmt.Fprintln(os.Stderr, "Error: --model is required (or set LLAMA_MODEL_PATH in .env, or run 'lazy-ai setup')")
+		fmt.Fprintln(os.Stderr, "Error: --model is required (or run 'lazy-cli setup')")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "Quick start:")
-		fmt.Fprintln(os.Stderr, "  lazy-ai setup --llama-server /path/to/llama-server --model /path/to/model.gguf")
+		fmt.Fprintln(os.Stderr, "  lazy-cli setup --llama-server /path/to/llama-server --model /path/to/model.gguf")
 		os.Exit(1)
 	}
 
@@ -93,7 +93,7 @@ func runREPL() {
 	fmt.Println("Starting LLM server...")
 	if err := server.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		fmt.Fprintln(os.Stderr, "Run 'lazy-ai doctor' to diagnose the issue.")
+		fmt.Fprintln(os.Stderr, "Run 'lazy-cli doctor' to diagnose the issue.")
 		os.Exit(1)
 	}
 	defer server.Stop()
@@ -144,12 +144,12 @@ func printUsage() {
 	fmt.Println("lazy-cli - Natural language to shell commands")
 	fmt.Println()
 	fmt.Println("Usage:")
-	fmt.Println("  lazy-ai              Start interactive CLI (default)")
-	fmt.Println("  lazy-ai setup        Configure llama-server and model paths")
-	fmt.Println("  lazy-ai status       Show current configuration and file status")
-	fmt.Println("  lazy-ai doctor       Run diagnostic checks")
-	fmt.Println("  lazy-ai help         Show this help message")
-	fmt.Println("  lazy-ai version      Show version")
+	fmt.Println("  lazy-cli              Start interactive CLI (default)")
+	fmt.Println("  lazy-cli setup        Configure llama-server and model paths")
+	fmt.Println("  lazy-cli status       Show current configuration and file status")
+	fmt.Println("  lazy-cli doctor       Run diagnostic checks")
+	fmt.Println("  lazy-cli help         Show this help message")
+	fmt.Println("  lazy-cli version      Show version")
 	fmt.Println()
 	fmt.Println("Flags (for interactive mode):")
 	fmt.Println("  --model PATH         Path to GGUF model file")
@@ -157,7 +157,7 @@ func printUsage() {
 	fmt.Println("  --port PORT          Port for llama-server")
 	fmt.Println()
 	fmt.Println("Setup:")
-	fmt.Println("  lazy-ai setup --llama-server /path/to/llama-server --model /path/to/model.gguf")
+	fmt.Println("  lazy-cli setup --llama-server /path/to/llama-server --model /path/to/model.gguf")
 }
 
 // loadEnv reads a .env file and sets environment variables
