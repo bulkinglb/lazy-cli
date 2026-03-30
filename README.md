@@ -29,7 +29,6 @@ Supports **Linux** and **macOS** on both **AMD64** and **ARM64**.
   - [Caution Patterns](#caution-patterns)
 - [Logging](#logging)
 - [Configuration File](#configuration-file)
-- [Environment Variables](#environment-variables)
 - [Project Structure](#project-structure)
 - [LLM Server Management](#llm-server-management)
 - [Troubleshooting](#troubleshooting)
@@ -404,19 +403,6 @@ The config is created automatically on first run. Edit it with `§config` inside
 
 ---
 
-## Environment Variables
-
-Optional — used as fallbacks when CLI flags are not provided.
-
-| Variable | Purpose |
-|---|---|
-| `LLAMA_MODEL_PATH` | Path to GGUF model file |
-| `LLAMA_SERVER_PATH` | Path to llama-server binary |
-
-Can be set in a `.env` file in the working directory (loaded automatically).
-
----
-
 ## Project Structure
 
 ```
@@ -449,7 +435,6 @@ lazy-cli/
 ├── go.mod
 ├── Makefile             Build and release automation
 ├── install.sh           One-line installer script
-├── .env                 Local environment (gitignored)
 └── .gitignore
 ```
 
