@@ -1,7 +1,7 @@
 .PHONY: help build all dist install clean test lint run release vet fmt
 
 # Variables
-VERSION=0.1.2
+VERSION=0.1.2.1
 BINARY_NAME=lazy-cli
 DIST_DIR=dist
 LINUX_AMD64=$(BINARY_NAME)-linux-amd64

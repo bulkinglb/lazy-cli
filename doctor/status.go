@@ -76,10 +76,10 @@ func RunStatus(args []string) int {
 		if srvOK && mdlOK {
 			fmt.Println("  Setup: VALID - ready to run")
 		} else {
-			fmt.Println("  Setup: INCOMPLETE - run 'lazy-ai doctor' for details")
+			fmt.Println("  Setup: INCOMPLETE - run 'lazy-cli doctor' for details")
 		}
 	} else {
-		fmt.Println("  Setup: NOT CONFIGURED - run 'lazy-ai setup' first")
+		fmt.Println("  Setup: NOT CONFIGURED - run 'lazy-cli setup' first")
 	}
 
 	return 0

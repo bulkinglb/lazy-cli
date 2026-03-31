@@ -92,7 +92,7 @@ fmt.Println(srvCheck)
 if !srvCheck.OK {
 fmt.Println()
 fmt.Println("Please provide the path to llama-server:")
-fmt.Println("  lazy-ai setup --llama-server /path/to/llama-server")
+fmt.Println("  lazy-cli setup --llama-server /path/to/llama-server")
 return 1
 }
 
@@ -104,7 +104,7 @@ fmt.Println(mdlCheck)
 if !mdlCheck.OK {
 fmt.Println()
 fmt.Println("Please provide the path to a .gguf model file:")
-fmt.Println("  lazy-ai setup --model /path/to/model.gguf")
+fmt.Println("  lazy-cli setup --model /path/to/model.gguf")
 return 1
 }
 
