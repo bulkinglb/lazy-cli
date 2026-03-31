@@ -115,12 +115,12 @@ After setup, paths are saved to `~/.lazy-cli/config.json`. Future runs need no f
 
 ## CLI Commands
 
-### `lazy-ai` — Start Interactive Mode
+### `lazy-cli` — Start Interactive Mode
 
 Launches the REPL. Starts the LLM server automatically, stops it on exit.
 
 ```
-lazy-ai [--model PATH] [--server PATH] [--port PORT]
+lazy-cli [--model PATH] [--server PATH] [--port PORT]
 ```
 
 | Flag | Description | Default |
@@ -131,12 +131,12 @@ lazy-ai [--model PATH] [--server PATH] [--port PORT]
 
 **Resolution order** for model/server paths: CLI flag > environment variable > config file.
 
-### `lazy-ai setup` — First-Time Configuration
+### `lazy-cli setup` — First-Time Configuration
 
 Validates paths, saves them to config, and test-starts the server. If `--llama-server` or `--model` are not provided, **automatically downloads** the latest llama.cpp release and Gemma 3 1B.
 
 ```
-lazy-ai setup [--llama-server PATH] [--model PATH] [--port PORT] [--skip-test]
+lazy-cli setup [--llama-server PATH] [--model PATH] [--port PORT] [--skip-test]
 ```
 
 What it does:
@@ -149,10 +149,10 @@ What it does:
 7. Saves everything to `~/.lazy-cli/config.json`
 8. Test-starts the server and runs a health check (unless `--skip-test`)
 
-### `lazy-ai status` — Show Current State
+### `lazy-cli status` — Show Current State
 
 ```
-$ lazy-ai status
+$ lazy-cli status
 
 === lazy-cli status ===
 
@@ -165,12 +165,12 @@ $ lazy-ai status
   Setup: VALID - ready to run
 ```
 
-### `lazy-ai doctor` — Run Diagnostic Checks
+### `lazy-cli doctor` — Run Diagnostic Checks
 
 Checks everything needed to run — config, directories, binary, model, port, and does a full server launch + API health test.
 
 ```
-$ lazy-ai doctor
+$ lazy-cli doctor
 
 === lazy-cli doctor ===
 
@@ -184,9 +184,9 @@ $ lazy-ai doctor
 All checks passed. Ready to run.
 ```
 
-### `lazy-ai help` — Show Usage
+### `lazy-cli help` — Show Usage
 
-### `lazy-ai version` — Show Version
+### `lazy-cli version` — Show Version
 
 ---
 
@@ -462,21 +462,21 @@ Server configuration:
 
 ### Server won't start
 ```bash
-lazy-ai doctor
+lazy-cli doctor
 ```
 This will pinpoint the exact issue — missing binary, bad model, port conflict.
 
 ### "model is required" error
 Run setup — it will auto-download everything:
 ```bash
-lazy-ai setup
+lazy-cli setup
 # or manually:
-lazy-ai setup --llama-server /path/to/llama-server --model /path/to/model.gguf
+lazy-cli setup --llama-server /path/to/llama-server --model /path/to/model.gguf
 ```
 
 ### Port already in use
 ```bash
-lazy-ai setup --port 8090
+lazy-cli setup --port 8090
 # or inside the REPL:
 §config port 8090
 ```
