@@ -34,6 +34,7 @@ type REPL struct {
 	writer    io.Writer
 	running   bool
 	history   []string
+	lastCmd   string
 }
 
 // New creates a REPL with config, logger, and server reference
@@ -137,12 +138,44 @@ func (r *REPL) handleAIInput(cmd Command) {
 		return
 	}
 
-	r.printf("Command: %s\n", result)
+	result = r.promptEdit(result)
 	r.executeWithSafety(result, cmd.RawText)
+}
+
+func (r *REPL) handleAIInputBatch(input string) {
+	if r.aiHandler == nil {
+		r.println("AI handler not configured")
+		return
+	}
+	result, err := r.aiHandler(input)
+	if err != nil {
+		r.printf("AI error: %v\n", err)
+		return
+	}
+	result = r.promptEdit(result)
+	r.executeWithSafety(result, input)
+}
+
+func (r *REPL) promptEdit(cmd string) string {
+	r.printf("Command: %s\n", cmd)
+	r.printf("Edit (Enter to run, or type to modify): ")
+	line, err := r.reader.ReadString('\n')
+	if err != nil {
+		return cmd
+	}
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return cmd
+	}
+	return line
 }
 
 func (r *REPL) executeWithSafety(command, userInput string) {
 	check := r.safety.Check(command)
+
+	if preview := tryDiffPreview(command); preview != "" {
+		r.println(preview)
+	}
 
 	switch check.Level {
 	case safety.Blocked:
@@ -176,6 +209,7 @@ func (r *REPL) executeWithSafety(command, userInput string) {
 	r.println("---")
 	start := time.Now()
 	result := r.executor.Run(command)
+	r.lastCmd = command
 	duration := time.Since(start)
 	r.println("---")
 	r.println(executor.FormatResult(result))
@@ -242,5 +276,28 @@ func (r *REPL) logError(context string, err error) {
 func (r *REPL) logBlocked(input, command, reason string) {
 	if r.log != nil {
 		r.log.LogBlocked(input, command, reason)
+	}
+}
+
+func (r *REPL) executeNoConfirm(command string) {
+	check := r.safety.Check(command)
+	if check.Level == safety.Blocked {
+		r.printf("BLOCKED: %s\n", check.Reason)
+		r.logBlocked("", command, check.Reason)
+		return
+	}
+	if check.Level == safety.Dangerous {
+		r.printf("DANGEROUS: %s — skipping in watch mode.\n", check.Reason)
+		return
+	}
+	r.println("---")
+	start := time.Now()
+	result := r.executor.Run(command)
+	r.lastCmd = command
+	duration := time.Since(start)
+	r.println("---")
+	r.println(executor.FormatResult(result))
+	if r.log != nil && r.cfg.LogEnabled {
+		r.log.LogDirect(command, check.Level.String(), check.Reason, result.ExitCode, result.Stdout, result.Stderr, duration)
 	}
 }
