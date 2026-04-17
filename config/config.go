@@ -22,7 +22,8 @@ type Config struct {
 	LogPath     string            `json:"log_path"`     // log directory path
 	ModelPath   string            `json:"model_path"`   // path to GGUF model file
 	ServerPath  string            `json:"server_path"`  // path to llama-server binary
-	PathAliases map[string]string `json:"path_aliases"` // known path shortcuts
+	PathAliases map[string]string `json:"path_aliases"`         // known path shortcuts
+	Snippets    map[string]string `json:"snippets,omitempty"`   // saved command bookmarks
 
 	filePath string // where this config is stored (not serialized)
 }
@@ -37,6 +38,7 @@ func Default() *Config {
 		LogEnabled:  true,
 		LogPath:     filepath.Join(home, ".lazy-cli", "logs"),
 		PathAliases: make(map[string]string),
+		Snippets:    make(map[string]string),
 	}
 }
 
@@ -70,6 +72,9 @@ func Load() (*Config, error) {
 	// Ensure maps are initialized after unmarshal
 	if cfg.PathAliases == nil {
 		cfg.PathAliases = make(map[string]string)
+	}
+	if cfg.Snippets == nil {
+		cfg.Snippets = make(map[string]string)
 	}
 
 	return cfg, nil

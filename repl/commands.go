@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"lazy-cli/config"
 	"lazy-cli/logger"
@@ -23,6 +24,11 @@ func (r *REPL) registerBuiltinCommands() {
 	r.registry.Register("config", "Show or change configuration", r.cmdConfig)
 	r.registry.Register("logs", "List session logs or view a session", r.cmdLogs)
 	r.registry.Register("clearlogs", "Clear all log files", r.cmdClearLogs)
+	r.registry.Register("batch",    "Execute a file of natural language instructions", r.cmdBatch)
+	r.registry.Register("watch",    "Re-run a command on a schedule (e.g. watch 30s df -h)", r.cmdWatch)
+	r.registry.Register("save",     "Save last command as a named snippet", r.cmdSave)
+	r.registry.Register("run",      "Execute a saved snippet by name", r.cmdRun)
+	r.registry.Register("snippets", "List all saved snippets", r.cmdSnippets)
 }
 
 // --- help ---
@@ -424,6 +430,143 @@ func (r *REPL) cmdClearLogs(_ string) error {
 	}
 
 	r.printf("Cleared %d log file(s).\n", count)
+	return nil
+}
+
+// --- batch ---
+
+func (r *REPL) cmdBatch(args string) error {
+	path := strings.TrimSpace(args)
+	if path == "" {
+		r.println("Usage: batch <file>")
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		r.printf("Error reading file: %v\n", err)
+		return nil
+	}
+	var tasks []string
+	for _, l := range strings.Split(string(data), "\n") {
+		l = strings.TrimSpace(l)
+		if l == "" || strings.HasPrefix(l, "#") {
+			continue
+		}
+		tasks = append(tasks, l)
+	}
+	if len(tasks) == 0 {
+		r.println("No instructions found in file.")
+		return nil
+	}
+	r.printf("Batch: %d instructions found.\n", len(tasks))
+	for i, task := range tasks {
+		r.printf("\n[%d/%d] %s\n", i+1, len(tasks), task)
+		r.handleAIInputBatch(task)
+		if !r.running {
+			break
+		}
+	}
+	r.println("\nBatch complete.")
+	return nil
+}
+
+// --- watch ---
+
+func (r *REPL) cmdWatch(args string) error {
+	parts := strings.SplitN(strings.TrimSpace(args), " ", 2)
+	if len(parts) < 2 {
+		r.println("Usage: watch <interval> <query>  (e.g. watch 30s df -h)")
+		return nil
+	}
+	interval, err := time.ParseDuration(parts[0])
+	if err != nil {
+		r.printf("Invalid interval %q: %v\n", parts[0], err)
+		return nil
+	}
+	query := parts[1]
+
+	var cmd string
+	if strings.HasPrefix(query, "!") {
+		cmd = strings.TrimPrefix(query, "!")
+	} else if r.aiHandler != nil {
+		cmd, err = r.aiHandler(query)
+		if err != nil {
+			r.printf("AI error: %v\n", err)
+			return nil
+		}
+	} else {
+		cmd = query
+	}
+
+	r.printf("Watch command : %s\n", cmd)
+	r.printf("Interval      : %s\n", parts[0])
+	if !r.confirm("Start watching? [Y/n]: ") {
+		return nil
+	}
+
+	r.println("Running (Ctrl+C to stop)...")
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	r.printf("[%s]\n", time.Now().Format("15:04:05"))
+	r.executeNoConfirm(cmd)
+
+	for r.running {
+		<-ticker.C
+		if !r.running {
+			break
+		}
+		r.printf("\n[%s]\n", time.Now().Format("15:04:05"))
+		r.executeNoConfirm(cmd)
+	}
+	return nil
+}
+
+// --- snippets ---
+
+func (r *REPL) cmdSave(args string) error {
+	name := strings.TrimSpace(args)
+	if name == "" {
+		r.println("Usage: save <name>")
+		return nil
+	}
+	if r.lastCmd == "" {
+		r.println("No command to save.")
+		return nil
+	}
+	r.cfg.Snippets[name] = r.lastCmd
+	if err := r.cfg.Save(); err != nil {
+		return err
+	}
+	r.printf("Saved %q: %s\n", name, r.lastCmd)
+	return nil
+}
+
+func (r *REPL) cmdRun(args string) error {
+	name := strings.TrimSpace(args)
+	if name == "" {
+		r.println("Usage: run <name>")
+		return nil
+	}
+	cmd, ok := r.cfg.Snippets[name]
+	if !ok {
+		r.printf("No snippet named %q. Use %ssnippets to list saved snippets.\n", name, r.cfg.Prefix)
+		return nil
+	}
+	r.printf("Running snippet %q: %s\n", name, cmd)
+	r.executeWithSafety(cmd, "")
+	return nil
+}
+
+func (r *REPL) cmdSnippets(_ string) error {
+	if len(r.cfg.Snippets) == 0 {
+		r.printf("No snippets saved. Use %ssave <name> after running a command.\n", r.cfg.Prefix)
+		return nil
+	}
+	r.println("Saved snippets:")
+	for name, cmd := range r.cfg.Snippets {
+		r.printf("  %-20s %s\n", name, cmd)
+	}
 	return nil
 }
 
