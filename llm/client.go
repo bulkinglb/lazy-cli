@@ -41,11 +41,15 @@ type CompletionResponse struct {
 
 // Complete sends a prompt and returns the generated text
 func (c *Client) Complete(prompt string) (string, error) {
+	return c.completeWithOptions(prompt, 256, []string{"\n\n", "```"})
+}
+
+func (c *Client) completeWithOptions(prompt string, maxTokens int, stop []string) (string, error) {
 	req := CompletionRequest{
 		Prompt:      prompt,
-		MaxTokens:   256,
-		Temperature: 0.1, // Low temp for deterministic command generation
-		Stop:        []string{"\n\n", "```"},
+		MaxTokens:   maxTokens,
+		Temperature: 0.1,
+		Stop:        stop,
 	}
 
 	body, err := json.Marshal(req)
@@ -74,6 +78,70 @@ func (c *Client) Complete(prompt string) (string, error) {
 	}
 
 	return result.Content, nil
+}
+
+// GenerateUndo generates a shell command that reverses the effect of the given command
+func (c *Client) GenerateUndo(command string) (string, error) {
+	result, err := c.Complete(buildUndoPrompt(command))
+	if err != nil {
+		return "", err
+	}
+	return cleanCommand(result), nil
+}
+
+// ExplainCommand returns a plain English explanation of what a shell command does
+func (c *Client) ExplainCommand(command string) (string, error) {
+	result, err := c.completeWithOptions(buildExplainPrompt(command), 512, []string{"---", "```"})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(result), nil
+}
+
+func buildUndoPrompt(command string) string {
+	return `You are a shell command reversal assistant.
+Given a shell command that was already executed, output the exact shell command to undo its effect.
+
+RULES:
+- Output ONLY the reversal command, nothing else
+- No explanations, no markdown, no code fences
+- If the command cannot be undone, output exactly: CANNOT_UNDO
+
+EXAMPLES:
+
+Command: mv notes.txt archive/notes.txt
+Undo: mv archive/notes.txt notes.txt
+
+Command: mkdir -p /tmp/mydir
+Undo: rmdir /tmp/mydir
+
+Command: cp src.go src.go.bak
+Undo: rm src.go.bak
+
+Command: rm important.txt
+Undo: CANNOT_UNDO
+
+Command: echo hello > out.txt
+Undo: CANNOT_UNDO
+
+Command: ` + command + `
+Undo:`
+}
+
+func buildExplainPrompt(command string) string {
+	return `You are a shell command explainer. Explain what the following shell command does in plain English.
+Break down each component (flags, arguments, pipes). Be concise but complete. No markdown.
+
+EXAMPLES:
+
+Command: ls -la /tmp
+Explanation: Lists all files in /tmp including hidden ones. The -l flag shows a detailed view with permissions, owner, size, and date. The -a flag includes hidden files (names starting with a dot).
+
+Command: find . -name "*.go" | xargs grep -l "TODO"
+Explanation: Recursively finds all .go files in the current directory, then searches each one for the text TODO, printing only the filenames that contain it.
+
+Command: ` + command + `
+Explanation:`
 }
 
 // GenerateCommand uses the LLM to convert natural language to a shell command

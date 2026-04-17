@@ -124,6 +124,12 @@ func runREPL() {
 	r.SetAIHandler(func(input string) (string, error) {
 		return client.GenerateCommand(input)
 	})
+	r.SetUndoHandler(func(command string) (string, error) {
+		return client.GenerateUndo(command)
+	})
+	r.SetExplainHandler(func(command string) (string, error) {
+		return client.ExplainCommand(command)
+	})
 
 	// Handle Ctrl+C gracefully
 	sigCh := make(chan os.Signal, 1)
