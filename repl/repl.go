@@ -20,20 +20,29 @@ const defaultPrompt = "lazy-cli> "
 // AIHandler processes natural language input and returns a shell command
 type AIHandler func(input string) (string, error)
 
+// UndoHandler generates a reversal shell command for a previously executed command
+type UndoHandler func(command string) (string, error)
+
+// ExplainHandler generates a plain English explanation of a shell command
+type ExplainHandler func(command string) (string, error)
+
 // REPL manages the interactive command loop
 type REPL struct {
-	prompt    string
-	registry  *CommandRegistry
-	aiHandler AIHandler
-	executor  *executor.Executor
-	safety    *safety.Checker
-	log       *logger.Logger
-	cfg       *config.Config
-	server    *llm.Server
-	reader    *bufio.Reader
-	writer    io.Writer
-	running   bool
-	history   []string
+	prompt         string
+	registry       *CommandRegistry
+	aiHandler      AIHandler
+	undoHandler    UndoHandler
+	explainHandler ExplainHandler
+	executor       *executor.Executor
+	safety         *safety.Checker
+	log            *logger.Logger
+	cfg            *config.Config
+	server         *llm.Server
+	reader         *bufio.Reader
+	writer         io.Writer
+	running        bool
+	history        []string
+	lastCmd        string
 }
 
 // New creates a REPL with config, logger, and server reference
@@ -58,6 +67,16 @@ func New(cfg *config.Config, log *logger.Logger, server *llm.Server) *REPL {
 // SetAIHandler sets the handler for natural language input
 func (r *REPL) SetAIHandler(h AIHandler) {
 	r.aiHandler = h
+}
+
+// SetUndoHandler sets the handler for generating reversal commands
+func (r *REPL) SetUndoHandler(h UndoHandler) {
+	r.undoHandler = h
+}
+
+// SetExplainHandler sets the handler for explaining commands
+func (r *REPL) SetExplainHandler(h ExplainHandler) {
+	r.explainHandler = h
 }
 
 // RegisterCommand adds a custom command
@@ -176,6 +195,7 @@ func (r *REPL) executeWithSafety(command, userInput string) {
 	r.println("---")
 	start := time.Now()
 	result := r.executor.Run(command)
+	r.lastCmd = command
 	duration := time.Since(start)
 	r.println("---")
 	r.println(executor.FormatResult(result))

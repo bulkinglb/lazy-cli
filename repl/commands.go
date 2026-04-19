@@ -23,6 +23,8 @@ func (r *REPL) registerBuiltinCommands() {
 	r.registry.Register("config", "Show or change configuration", r.cmdConfig)
 	r.registry.Register("logs", "List session logs or view a session", r.cmdLogs)
 	r.registry.Register("clearlogs", "Clear all log files", r.cmdClearLogs)
+	r.registry.Register("undo", "Generate and run a reversal of the last command", r.cmdUndo)
+	r.registry.Register("explain", "Explain what the last command did", r.cmdExplain)
 }
 
 // --- help ---
@@ -424,6 +426,70 @@ func (r *REPL) cmdClearLogs(_ string) error {
 	}
 
 	r.printf("Cleared %d log file(s).\n", count)
+	return nil
+}
+
+// --- undo ---
+
+func (r *REPL) cmdUndo(_ string) error {
+	if r.lastCmd == "" {
+		r.println("No command has been executed yet.")
+		return nil
+	}
+	if r.undoHandler == nil {
+		r.println("Undo handler not configured.")
+		return nil
+	}
+
+	r.printf("Generating reversal for: %s\n", r.lastCmd)
+
+	undoCmd, err := r.undoHandler(r.lastCmd)
+	if err != nil {
+		r.printf("Error generating undo command: %v\n", err)
+		return nil
+	}
+
+	sanitized := strings.TrimSpace(undoCmd)
+	if idx := strings.IndexAny(sanitized, "\r\n"); idx >= 0 {
+		sanitized = strings.TrimSpace(sanitized[:idx])
+	}
+	if sanitized == "" || sanitized == "CANNOT_UNDO" || strings.Contains(strings.ToUpper(sanitized), "CANNOT_UNDO") {
+		r.printf("Cannot undo: no safe reversal exists for: %s\n", r.lastCmd)
+		return nil
+	}
+
+	r.printf("Reversal: %s\n", sanitized)
+	r.executeWithSafety(sanitized, "")
+	return nil
+}
+
+// --- explain ---
+
+func (r *REPL) cmdExplain(_ string) error {
+	if r.lastCmd == "" {
+		r.println("No command has been executed yet.")
+		return nil
+	}
+	if r.explainHandler == nil {
+		r.println("Explain handler not configured.")
+		return nil
+	}
+
+	r.printf("Explaining: %s\n---\n", r.lastCmd)
+
+	explanation, err := r.explainHandler(r.lastCmd)
+	if err != nil {
+		r.printf("Error generating explanation: %v\n", err)
+		return nil
+	}
+
+	if strings.TrimSpace(explanation) == "" {
+		r.println("(no explanation returned)")
+		return nil
+	}
+
+	r.println(explanation)
+	r.println("---")
 	return nil
 }
 
