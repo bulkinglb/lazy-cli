@@ -449,14 +449,17 @@ func (r *REPL) cmdUndo(_ string) error {
 		return nil
 	}
 
-	trimmed := strings.TrimSpace(undoCmd)
-	if trimmed == "" || trimmed == "CANNOT_UNDO" || strings.Contains(strings.ToUpper(trimmed), "CANNOT_UNDO") {
+	sanitized := strings.TrimSpace(undoCmd)
+	if idx := strings.IndexAny(sanitized, "\r\n"); idx >= 0 {
+		sanitized = strings.TrimSpace(sanitized[:idx])
+	}
+	if sanitized == "" || sanitized == "CANNOT_UNDO" || strings.Contains(strings.ToUpper(sanitized), "CANNOT_UNDO") {
 		r.printf("Cannot undo: no safe reversal exists for: %s\n", r.lastCmd)
 		return nil
 	}
 
-	r.printf("Reversal: %s\n", undoCmd)
-	r.executeWithSafety(undoCmd, "")
+	r.printf("Reversal: %s\n", sanitized)
+	r.executeWithSafety(sanitized, "")
 	return nil
 }
 
